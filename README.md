@@ -3,7 +3,7 @@
 Sistema cliente-servidor para consumir un modelo de visión artificial (clasificación **gato vs. perro**) a través de un servicio web.
 
 **Integrantes:** Lauren Dayanna Villanueva Camero / Mariana Cruz Martinez / ...
-**Curso:** Electiva de Ingeniería de Softwa: Ciencia de Datos
+**Curso:** Electiva de Ingeniería de Software: Ciencia de Datos
 
 ## Arquitectura
 

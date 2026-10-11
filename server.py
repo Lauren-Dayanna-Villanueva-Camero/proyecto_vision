@@ -7,12 +7,20 @@ from PIL import Image
 import keras
 from flask_cors import CORS
 
+from pymongo import MongoClient
+import gridfs
+
 app = Flask(__name__)
 CORS(app)
 
 # Se carga UNA sola vez al iniciar
 model = keras.models.load_model("modelo.keras")
 IMG_SIZE = (180, 180)
+
+mongo = MongoClient("mongodb://localhost:27017", serverSelectionTimeoutMS=2000)
+db = mongo["vision"]
+fs = gridfs.GridFS(db)
+predicciones = db["predicciones"]
 
 def preprocesar(b64_str):
     img_bytes = base64.b64decode(b64_str)
@@ -38,6 +46,22 @@ def predict():
 
     print(f"[{datetime.now()}] cliente={data.get('client_id')} "
           f"camara={data.get('camera_id')} -> {etiqueta} ({confianza:.2f})")
+    
+    try:
+        meta = {
+            "client_id": data.get("client_id"),
+            "camera_id": data.get("camera_id"),
+            "location": data.get("location"),
+            "timestamp": data.get("timestamp"),
+            "server_time": datetime.utcnow(),
+            "prediction": etiqueta,
+            "confidence": round(confianza, 4),
+        }
+        img_bytes = base64.b64decode(data["image"])
+        file_id = fs.put(img_bytes, filename=f"{meta['client_id']}_{meta['timestamp']}.jpg", **meta)
+        predicciones.insert_one({**meta, "image_id": file_id})
+    except Exception as e:
+        print("Error guardando en Mongo:", e)   # no rompe la respuesta al cliente
 
     return jsonify({
         "prediction": etiqueta,

@@ -4,3 +4,9 @@ node_modules/
 .expo/
 dist/
 .env
+
+# Entrenamiento: el dataset y los archivos que genera el notebook no se suben
+PetImages/
+*.zip
+mejor_modelo.keras
+historial_entrenamiento.csv

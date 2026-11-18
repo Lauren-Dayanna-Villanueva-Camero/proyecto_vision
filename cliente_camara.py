@@ -1,12 +1,58 @@
-import base64, cv2, requests
-from datetime import datetime
+"""
+Cliente Python (cámara): toma fotogramas de la webcam o de una cámara IP con OpenCV
+y los envía al servicio web.
 
-API_URL = "http://127.0.0.1:5000/predict"
-FUENTE = 0   # 0 = webcam del PC. Para cámara IP va una URL RTSP (ver abajo)
-# FUENTE = "rtsp://USUARIO:CLAVE@IP_DE_LA_CAMARA:554/stream1"-- Para cámara IP. Cambiar USUARIO, CLAVE e IP_DE_LA_CAMARA por los correctos
+Ejemplos:
+    python cliente_camara.py                      # webcam del PC, ESPACIO para predecir
+    python cliente_camara.py --auto 5             # envía un fotograma cada 5 segundos
+    python cliente_camara.py --fuente "rtsp://USUARIO:CLAVE@IP_DE_LA_CAMARA:554/stream1"
 
-cap = cv2.VideoCapture(FUENTE)
-resultado = ""
+Teclas: ESPACIO = predecir el fotograma actual | Q = salir
+
+Nota: no dejes la URL RTSP con usuario y clave escrita en el código ni la subas a GitHub.
+"""
+import argparse
+import time
+
+import cv2
+
+from utilidades_cliente import SERVIDOR, construir_json, decidir_accion, enviar_http
+
+parser = argparse.ArgumentParser(description="Cliente de cámara para el servicio de visión")
+parser.add_argument("--fuente", default="0", help="0 = webcam del PC, o la URL RTSP de la cámara IP")
+parser.add_argument("--servidor", default=SERVIDOR, help="URL del servidor Flask")
+parser.add_argument("--cliente", default="cliente_python_cam_001", help="ID del cliente")
+parser.add_argument("--camara", default="webcam_pc", help="ID de la cámara")
+parser.add_argument("--ubicacion", default="Laboratorio 2", help="sitio de la cámara")
+parser.add_argument("--auto", type=float, default=0, help="enviar automáticamente cada N segundos")
+args = parser.parse_args()
+
+COLORES = {"ABRIR_PUERTA": (0, 200, 0), "ALARMA": (0, 0, 255), "REVISAR": (0, 200, 255)}
+
+fuente = int(args.fuente) if args.fuente.isdigit() else args.fuente
+cap = cv2.VideoCapture(fuente)
+if not cap.isOpened():
+    raise SystemExit("No se pudo abrir la cámara. Revisa --fuente.")
+
+texto, color = "ESPACIO: predecir | Q: salir", (255, 255, 255)
+ultimo_envio = 0
+
+
+def predecir_fotograma(frame):
+    """Fotograma (matriz NumPy) -> JPG -> Base64 + metadatos -> servidor -> acción."""
+    ok, buffer = cv2.imencode(".jpg", frame)
+    if not ok:
+        return "No se pudo codificar la imagen", (0, 0, 255)
+    payload = construir_json(buffer.tobytes(), args.cliente, args.camara, args.ubicacion)
+    try:
+        respuesta = enviar_http(payload, args.servidor)
+    except Exception as e:
+        print("Error:", e)
+        return "Error al consultar el servidor", (0, 0, 255)
+    codigo, mensaje = decidir_accion(respuesta)
+    print(f"{respuesta['prediction']} ({respuesta['confidence']:.1%}) -> {codigo}: {mensaje}")
+    return f"{respuesta['prediction']} {respuesta['confidence']:.0%} -> {codigo}", COLORES[codigo]
+
 
 while True:
     ok, frame = cap.read()
@@ -14,29 +60,18 @@ while True:
         print("No se pudo leer la cámara")
         break
 
-    cv2.putText(frame, resultado, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-    cv2.imshow("Camara - ESPACIO: predecir | Q: salir", frame)
+    vista = frame.copy()
+    cv2.putText(vista, texto, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, color, 2)
+    cv2.imshow("Camara", vista)
 
     tecla = cv2.waitKey(1) & 0xFF
     if tecla == ord("q"):
         break
-    if tecla == 32:  # espacio
-        _, buf = cv2.imencode(".jpg", frame)
-        b64 = base64.b64encode(buf).decode("utf-8")
-        payload = {
-            "client_id": "cliente_python_cam_001",
-            "timestamp": datetime.now().isoformat(),
-            "camera_id": "webcam_pc",
-            "location": "Laboratorio 2",
-            "image": b64,
-        }
-        try:
-            r = requests.post(API_URL, json=payload, timeout=10).json()
-            resultado = f"{r['prediction']} ({r['confidence']*100:.1f}%)"
-            print(r)
-        except Exception as e:
-            resultado = "Error"
-            print(e)
+
+    toca_auto = args.auto > 0 and time.time() - ultimo_envio >= args.auto
+    if tecla == 32 or toca_auto:          # 32 = barra espaciadora
+        texto, color = predecir_fotograma(frame)   # se envía el fotograma limpio, sin texto
+        ultimo_envio = time.time()
 
 cap.release()
 cv2.destroyAllWindows()

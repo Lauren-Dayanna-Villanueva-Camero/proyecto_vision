@@ -1,0 +1,14 @@
+# Servidor
+flask
+flask-cors
+pillow
+numpy
+tensorflow
+pymongo
+
+# Clientes de Python
+requests
+opencv-python
+
+# MQTT (puente y dispositivo simulado)
+paho-mqtt>=2.0

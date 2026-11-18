@@ -1,14 +1,18 @@
+# Versiones fijas: son las que se probaron con modelo.keras en Windows (Python 3.11).
+# Una versión distinta de TensorFlow/Keras podría no abrir el modelo guardado.
+
 # Servidor
-flask
-flask-cors
-pillow
-numpy
-tensorflow
-pymongo
+flask==3.1.3
+flask-cors==6.0.5
+pillow==13.0.0
+numpy==2.4.6
+tensorflow==2.21.0
+keras==3.15.1          # ya viene con tensorflow; se fija porque server.py la usa directamente
+pymongo==4.20.0
 
 # Clientes de Python
-requests
-opencv-python
+requests==2.34.2
+opencv-python==5.1.0.95
 
 # MQTT (puente y dispositivo simulado)
-paho-mqtt>=2.0
+paho-mqtt==2.2.0

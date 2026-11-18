@@ -60,7 +60,13 @@ def al_recibir(cliente, userdata, mensaje):
     # 3. Se publica la respuesta para ese dispositivo (JSON compacto: el ESP32 tiene poca memoria)
     resumen = {k: respuesta[k] for k in ("prediction", "confidence", "request_id", "error")
                if k in respuesta}
-    cliente.publish(f"{TOPIC_RESPUESTAS}/{client_id}", json.dumps(resumen, separators=(",", ":")))
+    try:
+        cliente.publish(f"{TOPIC_RESPUESTAS}/{client_id}", json.dumps(resumen, separators=(",", ":")))
+    except ValueError as e:
+        # Un client_id con '+' o '#' no sirve como tema MQTT. Sin este try, un solo
+        # mensaje así detendría el puente para todos los dispositivos.
+        print(f"No se pudo responder a '{client_id}': {e}")
+        return
     print(f"[{datetime.now():%H:%M:%S}] {client_id} ({len(mensaje.payload)} bytes) -> {resumen}")
 
 

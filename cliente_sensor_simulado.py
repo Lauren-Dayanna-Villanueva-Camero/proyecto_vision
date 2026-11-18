@@ -59,7 +59,10 @@ def al_conectar(cliente, userdata, flags, codigo, propiedades):
 
 
 def al_recibir(cliente, userdata, mensaje):
-    respuestas.put(json.loads(mensaje.payload.decode("utf-8")))
+    try:
+        respuestas.put(json.loads(mensaje.payload.decode("utf-8")))
+    except ValueError:      # si llega algo que no es JSON, se ignora (sin esto se detiene el hilo de MQTT)
+        print("Llegó una respuesta que no es JSON:", mensaje.payload[:100])
 
 
 cliente = mqtt.Client(mqtt.CallbackAPIVersion.VERSION2, client_id=args.cliente)
@@ -89,7 +92,14 @@ try:
         except Exception as e:
             print("No se pudo capturar la imagen:", e)
             continue
-        cliente.publish(TOPIC_SOLICITUDES, json.dumps(payload)).wait_for_publish(timeout=10)
+        # Se descartan respuestas viejas que llegaron tarde, para no confundirlas con la de esta foto
+        while not respuestas.empty():
+            respuestas.get_nowait()
+        try:
+            cliente.publish(TOPIC_SOLICITUDES, json.dumps(payload)).wait_for_publish(timeout=10)
+        except (RuntimeError, ValueError) as e:     # por ejemplo, se perdió la conexión con el broker
+            print("No se pudo publicar el mensaje:", e)
+            continue
         print(f"Publicado en '{TOPIC_SOLICITUDES}'. Esperando respuesta...")
 
         # --- Respuesta -> acción ---

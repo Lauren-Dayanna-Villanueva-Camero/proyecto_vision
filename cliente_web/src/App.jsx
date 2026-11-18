@@ -67,6 +67,11 @@ export default function App() {
 
   const tomarFoto = () => {
     const video = videoRef.current;
+    // Si el video todavía no muestra imagen, la foto saldría vacía (0x0 píxeles)
+    if (!video || !video.videoWidth) {
+      setError("La cámara todavía está cargando. Espera un momento y vuelve a intentarlo.");
+      return;
+    }
     const canvas = document.createElement("canvas");
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;

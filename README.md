@@ -52,7 +52,7 @@ Basado en el ejemplo [Image classification from scratch](https://keras.io/exampl
 
 - Entrada: imagen RGB de 180x180 píxeles, con valores de 0 a 255 (el modelo trae adentro la capa que los pasa a 0-1).
 - Salida: un valor (logit) al que el servidor aplica sigmoide para obtener la probabilidad de "perro".
-- Entrenado 25 épocas; se eligió la época 23 (`val_acc` ≈ 0.959, `val_loss` ≈ 0.111).
+- Entrenado con el notebook `entrenamiento/entrenar_modelo.ipynb` (limpieza, balanceo y partición 70/15/15). Las métricas sobre el conjunto de prueba quedan en la sección 8 del notebook.
 
 ### Entrenamiento
 
@@ -89,7 +89,7 @@ pip install -r requirements.txt
 python server.py
 ```
 
-El servidor queda escuchando en el puerto 5000. Al iniciar muestra la IP local de la máquina (por ejemplo `http://192.168.x.x:5000`); esa es la que usarán el celular, el ESP32 y otros equipos. Para comprobar que está vivo, abre `http://127.0.0.1:5000/health` en el navegador.
+El servidor queda escuchando en el puerto 5000. Al iniciar muestra la IP local de la máquina (por ejemplo `http://192.168.x.x:5000`); esa es la que usarán el celular, el ESP32 y otros equipos. Para comprobar que está vivo, abre `http://127.0.0.1:5000/` en el navegador: muestra el estado del servidor y la lista de endpoints.
 
 > El archivo `modelo.keras` debe estar en la misma carpeta que `server.py`.
 
@@ -120,7 +120,7 @@ npm install
 npm run dev
 ```
 
-Abre la dirección que muestra la terminal (normalmente `http://localhost:5173`), selecciona una imagen o pulsa **Usar cámara**, y luego **Predecir**. El cliente toma el host desde el que se abre la página y apunta al puerto 5000. El navegador solo permite usar la cámara en `http://localhost` o en páginas https.
+Abre la dirección que muestra la terminal (normalmente `http://localhost:5173`), selecciona una imagen o pulsa **Usar cámara**, y luego **Predecir**. El cliente toma el host desde el que se abre la página y apunta al puerto 5000. Desde otro equipo de la red usa la dirección `Network:` que muestra Vite (por ejemplo `http://192.168.x.x:5173`). El navegador solo permite usar la cámara en `http://localhost` o en páginas https; desde otro equipo usa la opción de subir un archivo.
 
 ### 5. Cliente móvil
 
@@ -158,7 +158,8 @@ Se necesitan tres terminales (además del servidor del paso 1):
 
 ```bash
 # Terminal A: broker MQTT (instalar Mosquitto desde https://mosquitto.org/download/)
-"C:\Program Files\mosquitto\mosquitto.exe" -c mosquitto.conf -v
+# En PowerShell (terminal de VS Code) va el & al inicio; en cmd se escribe sin el &
+& "C:\Program Files\mosquitto\mosquitto.exe" -c mosquitto.conf -v
 
 # Terminal B: puente MQTT -> servicio web
 python puente_mqtt.py
@@ -222,12 +223,21 @@ Si no tienes el sensor, pon `USAR_SENSOR_PIR = false` y la placa envía una foto
 }
 ```
 
-**Errores:** responde `400` con `{"error": "..."}` si falta algún campo o la imagen no es válida.
+**Errores:** todos los errores se responden en JSON con la forma `{"error": "..."}`:
+
+| Código | Cuándo |
+|---|---|
+| `400` | Falta algún campo, el cuerpo no es JSON o la imagen no es válida |
+| `413` | La petición pasa de 16 MB (la imagen en Base64 pesa un 33 % más que el archivo) |
+| `500` | Error inesperado del servidor (el detalle queda en la consola de `server.py`) |
+
+**Imágenes aceptadas:** JPG, PNG, GIF, WEBP, BMP… El servidor endereza las fotos de celular según su orientación EXIF, pone fondo blanco a las imágenes con transparencia y convierte las imágenes en escala de grises (también las de 16 bits) a RGB. Formatos como HEIC (iPhone) no se pueden leer.
 
 ### Otros endpoints
 
 | Endpoint | Descripción |
 |---|---|
+| `GET /` | Página de inicio: confirma que el servidor funciona y lista los endpoints |
 | `GET /health` | Indica si el servidor está vivo y si MongoDB está conectado |
 | `GET /historial?client_id=...&limit=20` | Últimas consultas guardadas y el total (requiere MongoDB) |
 | `GET /imagen/<image_id>` | Devuelve una imagen guardada en GridFS (requiere MongoDB) |
@@ -243,7 +253,7 @@ Si no tienes el sensor, pon `USAR_SENSOR_PIR = false` y la placa envía una foto
 - [x] Almacenamiento con GridFS
 - [x] Protocolo MQTT (broker + puente + dispositivo simulado)
 - [x] Notebook de entrenamiento con limpieza, balanceo, partición 70/15/15 y métricas
-- [ ] Reentrenar el modelo con el notebook y reemplazar `modelo.keras`
+- [x] Reentrenar el modelo con el notebook y reemplazar `modelo.keras`
 - [ ] Probar el sketch en la placa ESP32-CAM con el sensor
 - [ ] Probar la cámara IP Tapo
 

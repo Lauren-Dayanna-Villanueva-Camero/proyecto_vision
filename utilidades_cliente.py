@@ -26,7 +26,10 @@ def construir_json(img_bytes, client_id, camera_id, location):
 def enviar_http(payload, servidor=SERVIDOR):
     """Envía el JSON al servicio web y devuelve la respuesta como diccionario."""
     r = requests.post(f"{servidor}/predict", json=payload, timeout=30)
-    respuesta = r.json()
+    try:
+        respuesta = r.json()
+    except ValueError:      # la respuesta no es JSON (por ejemplo, otro programa en ese puerto)
+        raise RuntimeError(f"El servidor respondió {r.status_code} pero no envió un JSON. ¿Es la URL correcta?")
     if r.status_code != 200:
         raise RuntimeError(respuesta.get("error", f"Error {r.status_code} del servidor"))
     return respuesta

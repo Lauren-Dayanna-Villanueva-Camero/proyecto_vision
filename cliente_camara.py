@@ -65,7 +65,10 @@ while True:
     cv2.imshow("Camara", vista)
 
     tecla = cv2.waitKey(1) & 0xFF
-    if tecla == ord("q"):
+    if tecla in (ord("q"), ord("Q")):
+        break
+    # Si se cierra la ventana con la X, también se sale (si no, OpenCV la vuelve a abrir)
+    if cv2.getWindowProperty("Camara", cv2.WND_PROP_VISIBLE) < 1:
         break
 
     toca_auto = args.auto > 0 and time.time() - ultimo_envio >= args.auto

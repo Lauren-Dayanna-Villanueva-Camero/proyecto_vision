@@ -52,7 +52,8 @@ Basado en el ejemplo [Image classification from scratch](https://keras.io/exampl
 
 - Entrada: imagen RGB de 180x180 píxeles, con valores de 0 a 255 (el modelo trae adentro la capa que los pasa a 0-1).
 - Salida: un valor (logit) al que el servidor aplica sigmoide para obtener la probabilidad de "perro".
-- Entrenado con el notebook `entrenamiento/entrenar_modelo.ipynb` (limpieza, balanceo y partición 70/15/15). Las métricas sobre el conjunto de prueba quedan en la sección 8 del notebook.
+- Entrenado con el notebook `entrenamiento/entrenar_modelo.ipynb` (limpieza, balanceo y partición 70/15/15). La ejecución en Colab, con todas sus salidas, está en `entrenamiento/entrenar_modelo_resultado_colab.ipynb`.
+- Resultados en el conjunto de prueba: accuracy 0.920, precision 0.972, recall 0.865, specificity 0.975, F1 0.915 (mejor época: 10, `val_acc` ≈ 0.893).
 
 ### Entrenamiento
 

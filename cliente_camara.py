@@ -7,6 +7,11 @@ Ejemplos:
     python cliente_camara.py --auto 5             # envía un fotograma cada 5 segundos
     python cliente_camara.py --fuente "rtsp://USUARIO:CLAVE@IP_DE_LA_CAMARA:554/stream1"
 
+Celular como cámara IP (sin ESP32): instala la app "IP Webcam" (Android) o "DroidCam"
+(Android y iPhone), conecta el celular al mismo WiFi del PC y usa la dirección que muestra la app:
+    python cliente_camara.py --fuente http://192.168.1.20:8080/video --camara celular   # IP Webcam
+    python cliente_camara.py --fuente http://192.168.1.20:4747/video --camara celular   # DroidCam
+
 Teclas: ESPACIO = predecir el fotograma actual | Q = salir
 
 Nota: no dejes la URL RTSP con usuario y clave escrita en el código ni la subas a GitHub.
@@ -19,7 +24,7 @@ import cv2
 from utilidades_cliente import SERVIDOR, construir_json, decidir_accion, enviar_http
 
 parser = argparse.ArgumentParser(description="Cliente de cámara para el servicio de visión")
-parser.add_argument("--fuente", default="0", help="0 = webcam del PC, o la URL RTSP de la cámara IP")
+parser.add_argument("--fuente", default="0", help="0 = webcam del PC, o la URL de la cámara IP / del celular")
 parser.add_argument("--servidor", default=SERVIDOR, help="URL del servidor Flask")
 parser.add_argument("--cliente", default="cliente_python_cam_001", help="ID del cliente")
 parser.add_argument("--camara", default="webcam_pc", help="ID de la cámara")

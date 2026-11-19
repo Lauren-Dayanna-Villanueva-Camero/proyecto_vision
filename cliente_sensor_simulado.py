@@ -11,6 +11,8 @@ Ejemplos:
     python cliente_sensor_simulado.py                      # usa gato.jpg
     python cliente_sensor_simulado.py --imagen perro.jpg
     python cliente_sensor_simulado.py --webcam             # toma la foto con la webcam
+    python cliente_sensor_simulado.py --url http://192.168.1.20:8080/shot.jpg   # celular con IP Webcam
+    python cliente_sensor_simulado.py --url http://192.168.1.20:4747/video      # celular con DroidCam
     python cliente_sensor_simulado.py --auto 10 --broker 192.168.1.10
 """
 import argparse
@@ -19,6 +21,7 @@ import queue
 import time
 
 import paho.mqtt.client as mqtt
+import requests
 
 from utilidades_cliente import construir_json, ejecutar_accion
 
@@ -30,6 +33,8 @@ parser.add_argument("--broker", default="localhost", help="IP o nombre del broke
 parser.add_argument("--puerto", type=int, default=1883, help="puerto del broker")
 parser.add_argument("--imagen", default="gato.jpg", help="imagen que 'captura' la cámara")
 parser.add_argument("--webcam", action="store_true", help="capturar con la webcam del PC")
+parser.add_argument("--url", help="capturar desde el celular o una cámara IP "
+                    "(ej. http://192.168.1.20:8080/shot.jpg con la app IP Webcam)")
 parser.add_argument("--cliente", default="esp32cam_sim_001", help="ID del cliente")
 parser.add_argument("--camara", default="esp32cam_puerta", help="ID de la cámara")
 parser.add_argument("--ubicacion", default="Entrada principal", help="sitio del dispositivo")
@@ -41,14 +46,20 @@ respuestas = queue.Queue()      # aquí deja el hilo de MQTT las respuestas que 
 
 
 def capturar_imagen():
-    """Devuelve los bytes JPG de la imagen: desde la webcam o desde un archivo."""
-    if args.webcam:
+    """Devuelve los bytes JPG de la imagen: del celular (cámara IP), de la webcam o de un archivo."""
+    if args.url and args.url.lower().endswith(".jpg"):
+        # Una foto suelta (por ejemplo /shot.jpg de IP Webcam): basta con descargarla
+        r = requests.get(args.url, timeout=10)
+        r.raise_for_status()
+        return r.content
+    if args.url or args.webcam:
+        # Video (webcam o /video del celular): se abre, se toma un fotograma y se cierra
         import cv2
-        cap = cv2.VideoCapture(0)
+        cap = cv2.VideoCapture(args.url or 0)
         ok, frame = cap.read()
         cap.release()
         if not ok:
-            raise RuntimeError("no se pudo leer la webcam")
+            raise RuntimeError(f"no se pudo leer la cámara {args.url or '(webcam)'}")
         return cv2.imencode(".jpg", frame)[1].tobytes()
     with open(args.imagen, "rb") as f:
         return f.read()

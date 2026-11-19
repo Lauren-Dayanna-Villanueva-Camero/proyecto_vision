@@ -2,7 +2,7 @@
 
 Sistema cliente-servidor para consumir un modelo de visión artificial (clasificación **gato vs. perro**) a través de un servicio web.
 
-**Integrantes:** Lauren Dayanna Villanueva Camero / Mariana Cruz Martinez / ...
+**Integrantes:** Lauren Dayanna Villanueva Camero / Mariana Cruz Martinez
 **Curso:** Electiva de Ingeniería de Software: Ciencia de Datos
 
 ## Arquitectura
@@ -24,6 +24,8 @@ Servicio web (Python + Flask)  ◄───────────────�
 Respuesta JSON  →  el cliente ejecuta una acción
                    (al ESP32 le llega por MQTT en vision/respuestas/<client_id>)
 ```
+
+Si no hay placa ESP32-CAM, el **celular puede hacer de cámara IP** con una app como IP Webcam o DroidCam (ver el paso 8).
 
 **Caso de uso:** una puerta para mascotas que solo deja entrar gatos. Si el modelo ve un gato, el cliente abre la puerta; si ve un perro, la deja cerrada y activa una alarma; si la confianza es menor al 80 %, no hace nada.
 
@@ -107,9 +109,10 @@ python cliente_python.py otra_foto.jpg --ubicacion "Bodega 1"
 python cliente_camara.py                 # webcam del PC
 python cliente_camara.py --auto 5        # envía un fotograma cada 5 segundos
 python cliente_camara.py --fuente "rtsp://USUARIO:CLAVE@IP_DE_LA_CAMARA:554/stream1" --camara tapo_entrada
+python cliente_camara.py --fuente http://IP_DEL_CELULAR:8080/video --camara celular   # celular (paso 8)
 ```
 
-Presiona **Espacio** para enviar el fotograma actual y **Q** para salir. La última línea es para una cámara IP (por ejemplo una Tapo): la URL RTSP se pasa al ejecutar, así no queda escrita en el código.
+Presiona **Espacio** para enviar el fotograma actual y **Q** para salir. La tercera línea es para una cámara IP (por ejemplo una Tapo): la URL RTSP se pasa al ejecutar, así no queda escrita en el código. La cuarta usa el celular como cámara (ver el paso 8).
 
 > No subas al repositorio URLs RTSP con usuario y contraseña.
 
@@ -181,6 +184,27 @@ Si Mosquitto dice que el puerto 1883 está ocupado, es porque quedó corriendo c
 5. Sube el sketch y abre el monitor serie a 115200. Cuando el sensor detecta movimiento, la placa toma la foto, la publica y enciende el LED verde (gato) o el rojo (perro).
 
 Si no tienes el sensor, pon `USAR_SENSOR_PIR = false` y la placa envía una foto cada 15 segundos.
+
+### 8. Celular como cámara IP (en lugar del ESP32)
+
+Si no hay placa ESP32-CAM, el celular puede hacer de cámara de red: una app transmite por WiFi lo que ve la cámara, y los clientes de Python la leen con una URL, igual que a una cámara IP.
+
+1. Instala una de estas apps en el celular:
+   - **IP Webcam** (Android): ábrela, baja hasta el final y toca **Iniciar servidor** (*Start server*). Abajo aparece la dirección, por ejemplo `http://192.168.20.55:8080`.
+   - **DroidCam** (Android y iPhone): al abrirla muestra la IP del WiFi; el puerto es `4747`.
+2. El celular y el PC deben estar en la **misma red WiFi**. Para comprobarlo, abre en el navegador del PC `http://IP_DEL_CELULAR:8080/shot.jpg` (IP Webcam) o `http://IP_DEL_CELULAR:4747/video` (DroidCam): debe verse la imagen de la cámara.
+3. Usa esa dirección en los clientes (cambia la IP por la del celular):
+
+```bash
+# Por HTTP, viendo el video en una ventana: ESPACIO envía la foto, o --auto la envía cada N segundos
+python cliente_camara.py --fuente http://192.168.20.55:8080/video --camara celular --auto 3
+
+# Como el ESP32 del paso 7, por MQTT (con Mosquitto y puente_mqtt.py corriendo).
+# ENTER simula el sensor de movimiento, o --auto N toma una foto cada N segundos
+python cliente_sensor_simulado.py --url http://192.168.20.55:8080/shot.jpg --camara celular
+```
+
+Con DroidCam usa `http://IP_DEL_CELULAR:4747/video` en los dos comandos. Si el cliente no logra leer el video, cierra la pestaña del navegador donde lo probaste y vuelve a intentarlo.
 
 ## API
 
@@ -255,12 +279,15 @@ Si no tienes el sensor, pon `USAR_SENSOR_PIR = false` y la placa envía una foto
 - [x] Protocolo MQTT (broker + puente + dispositivo simulado)
 - [x] Notebook de entrenamiento con limpieza, balanceo, partición 70/15/15 y métricas
 - [x] Reentrenar el modelo con el notebook y reemplazar `modelo.keras`
-- [ ] Probar el sketch en la placa ESP32-CAM con el sensor
+- [x] Celular como cámara IP (IP Webcam o DroidCam) en los clientes de Python
+- [ ] Probar el celular como cámara IP con un celular real
+- [ ] (Opcional) Probar el sketch en la placa ESP32-CAM con el sensor
 - [ ] Probar la cámara IP Tapo
 
 ## Notas
 
 - La IP del servidor cambia si el equipo se reconecta a la red; hay que actualizarla en el cliente móvil y en el sketch del ESP32.
 - Si el celular o el ESP32 no logran conectarse, revisa que el Firewall de Windows permita los puertos 5000 (Flask) y 1883 (MQTT) en redes privadas.
+- Algunas redes WiFi (como las de las universidades) no dejan que los equipos se conecten entre sí. Si el PC no ve al celular, conecta el PC al punto de acceso (hotspot) del celular y usa las IP nuevas que muestren `server.py` y la app de la cámara.
 - El modelo solo conoce gatos y perros: ante cualquier otra imagen igual responde una de las dos clases.
 - El servidor de Flask está en modo desarrollo; no es apto para producción.

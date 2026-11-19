@@ -116,7 +116,10 @@ def decodificar_imagen(b64_str):
         raise ValueError("el Base64 no es válido")
     try:
         img = Image.open(io.BytesIO(img_bytes))
-        tipo = Image.MIME.get(img.format, "image/jpeg")
+        # Muchas fotos de celulares Android se leen como "MPO" (un JPG con imágenes extra adentro).
+        # Se tratan como JPG; si no, /imagen las enviaría como "image/mpo" y el navegador no las muestra.
+        formato = "JPEG" if img.format == "MPO" else img.format
+        tipo = Image.MIME.get(formato, "image/jpeg")
         # Las fotos de celular se guardan "acostadas" con una marca EXIF que dice cómo girarlas.
         # El visor de fotos la respeta; aquí se aplica para que el modelo vea la foto derecha.
         img = ImageOps.exif_transpose(img)

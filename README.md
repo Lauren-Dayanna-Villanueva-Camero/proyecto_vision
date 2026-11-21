@@ -67,7 +67,7 @@ El notebook `entrenamiento/entrenar_modelo.ipynb` entrena el modelo con los paso
 4. **Partición** 70 % entrenamiento, 15 % validación y 15 % prueba, guardada en `train.csv`, `val.csv` y `test.csv`.
 5. Carga de las imágenes desde los CSV con `tf.data` y aumento de datos.
 6. Modelo desde cero (Xception pequeña).
-7. Entrenamiento con *callbacks* (`ModelCheckpoint`, `EarlyStopping`, `CSVLogger`).
+7. Entrenamiento con *callbacks* (`ModelCheckpoint`, `ReduceLROnPlateau`, `CSVLogger` y uno propio, `ParadaPorMeta`): siempre se entrenan las 25 épocas y se guarda la de mayor `val_acc`. Si después de las 25 la mejor `val_acc` no llega al 96 %, se sigue entrenando hasta alcanzarlo o hasta 50 épocas.
 8. **Evaluación con el conjunto de prueba**: accuracy, precision, recall, specificity, F1 y matriz de confusión.
 9. Se guarda `modelo.keras`.
 

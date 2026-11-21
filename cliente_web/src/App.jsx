@@ -42,7 +42,15 @@ export default function App() {
   // --- Captura 1: desde un archivo ---
   const onFile = (e) => {
     const file = e.target.files[0];
+    // Se vacía el selector para que, si eliges el mismo archivo otra vez, se vuelva a cargar
+    e.target.value = "";
     if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setPreview(null);
+      setResultado(null);
+      setError(`"${file.name}" no es una imagen. Elige un archivo JPG, PNG, WEBP...`);
+      return;
+    }
     const reader = new FileReader();
     reader.onload = () => nuevaImagen(reader.result, "web_upload");
     reader.readAsDataURL(file); // imagen binaria -> Base64
@@ -103,7 +111,9 @@ export default function App() {
           image: preview.split(",")[1], // quita el prefijo "data:image/...;base64,"
         }),
       });
-      const data = await res.json();
+      // Si en el puerto 5000 responde otro programa, la respuesta no es JSON
+      const data = await res.json().catch(() => null);
+      if (!data) throw new Error(`El servidor respondió ${res.status} pero no envió un JSON. ¿Es la dirección correcta?`);
       if (!res.ok) throw new Error(data.error || "Error del servidor");
       setResultado(data);
     } catch (err) {

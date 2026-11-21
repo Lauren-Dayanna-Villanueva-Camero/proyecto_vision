@@ -7,6 +7,12 @@ import * as ImagePicker from "expo-image-picker";
 const SERVIDOR_INICIAL = "http://192.168.20.45:5000";
 const UMBRAL_CONFIANZA = 0.8; // por debajo de esto no se toma ninguna decisión
 
+// Acepta "192.168.20.45:5000" o "http://192.168.20.45:5000/": agrega http:// si falta y quita la "/" final
+function urlServidor(texto) {
+  const limpio = texto.trim().replace(/\/+$/, "");
+  return /^https?:\/\//i.test(limpio) ? limpio : `http://${limpio}`;
+}
+
 // Lógica de negocio del cliente: puerta para mascotas que solo deja entrar gatos
 function decidirAccion(respuesta) {
   const porcentaje = (respuesta.confidence * 100).toFixed(0);
@@ -50,7 +56,7 @@ export default function App() {
     setCargando(true);
     setResultado(null);
     try {
-      const res = await fetch(`${servidor.trim()}/predict`, {
+      const res = await fetch(`${urlServidor(servidor)}/predict`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -61,7 +67,9 @@ export default function App() {
           image: b64,
         }),
       });
-      const data = await res.json();
+      // Si en esa dirección responde otro programa, la respuesta no es JSON
+      const data = await res.json().catch(() => null);
+      if (!data) throw new Error(`El servidor respondió ${res.status} pero no envió un JSON. ¿Es la dirección correcta?`);
       if (!res.ok) throw new Error(data.error || "Error del servidor");
       setResultado(data);
     } catch (e) {
